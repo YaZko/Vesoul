@@ -8,15 +8,9 @@ let read_lines name : string list =
     | None -> close_in ic; List.rev acc in
   loop []
 
-
-let load_file f =
-  let ic = open_in f in
-  let n = in_channel_length ic in
-  let s = String.create n in
-  really_input ic s 0 n;
-  close_in ic;
-  s
-
+let print_file name =
+  let sl = read_lines name in
+  List.iter (fun x -> Printf.printf "%s\n" x) sl
     
 let () =
-  Printf.printf "%s" (load_file "main.ml")
+  print_file "main.ml"
