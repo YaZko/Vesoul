@@ -12,8 +12,31 @@ type data = {
   groups: int;
   is_undisp : bool array array;
   size : int array;
+  capa : int array;
   ratio: (int * float) array;
 }
+
+let score_solution (d: data) gr c l : int =
+
+  let servers = Array.length d.size in
+
+  let rec foldmin n f: int =
+    if n = 0 then f 0
+    else min (f n) (foldmin (n - 1) f)
+  in
+
+  let rec foldsum n f: int =
+    if n = 0 then f 0
+    else (f n) + (foldsum (n - 1) f)
+  in
+
+  let guar_capa m i g : int =
+    if (l.(m) = i
+    || gr.(m) <> g) then 0
+    else d.capa.(m)
+  in
+
+  foldmin (d.groups - 1) (fun g -> (foldmin (d.rows -  1) (fun i -> (foldsum (servers - 1) (fun m -> guar_capa m i g)))))
 
 let solution (d: data) (startline: int) =
 
@@ -98,7 +121,7 @@ let alloc2 (server: int)
   let is_done = ref false in
 
       let rec alloc l ord =
-  (if l = startline (* && ord = Asc *)
+  (if l = startline && (ord = Asc || startline = 0 || startline = d.rows - 1)
    then if !is_done then raise Not_found
      else is_done := true 
    else ());
@@ -192,31 +215,30 @@ let () =
     ratio = ratio;
     is_undisp = is_undisp;
     size = Array.map fst data;
+    capa = Array.map snd data;
   } in
 
   let is_undisp_save = Array.map Array.copy is_undisp in
 
-  let score_solution d g l c = 0 in
-  
   let best_score = ref 0 in
   let best_sol = ref ([||],[||],[||]) in
   
   (** Solution *)
-  for k = 0 to rows - rows  do
-    let (group , ligne , column) as sol = solution d 0 in
+  for k = 0 to rows - 1  do
+    let (group , ligne , column) as sol = solution d k in
     Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save; 
-    let score = score_solution d group ligne column in
+(*     print_undisp d.is_undisp; *)
+    let score = score_solution d group column ligne in
     if score >= ! best_score
     then begin
       best_score := score ;
       best_sol := sol ;
-      Printf.printf "Best solution has score %d\n" score
     end
-    else ()
+    else ();
+    Printf.printf "Solution %d has score %d\n" k score
   done
   ;  
 
-    
   (** Impression de la solution. *)
   let oc = open_out_bin "vesoul" in
   let (group , ligne , column) = ! best_sol in 
