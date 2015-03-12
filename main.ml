@@ -82,10 +82,10 @@ let () =
     (s, float_of_int c /. float_of_int z)
   ) in
 
-  Array.sort (fun (s1, r1) (s2, r2) -> compare r2 r1) ratio;
+  Array.sort (fun (s1, r1) (s2, r2) -> compare (r2, - fst data.(s2)) (r1, - fst data.(s1))) ratio;
 
   (** Affichage des serveurs par ratio croissant *)
-  let () = Array.iter (fun (s, r) -> Printf.printf "%4d %f\n" s r) ratio in
+  let () = Array.iter (fun (s, r) -> Printf.printf "%4d %2.0f %2d\n" s r (fst data.(s))) ratio in
 
   let gr     := Array.init servers (fun _ -> -1) in
   let line   := Array.init servers (fun _ -> -1) in
