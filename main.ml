@@ -17,17 +17,17 @@ let servers = Array.length d.size in
 
 let fit
     (l: int) (c:int) (t: int) (sz:int) : int option =
-  let rec fit c t sz =
+  let rec fit c t =
   if t = 0
   then Some (c-sz)
   else
     try 
       if d.is_undisp.(l).(c)
-      then fit (c+1) sz sz
-      else fit (c+1) (t-1) sz
+      then fit (c+1) sz
+      else fit (c+1) (t-1)
     with _ -> None
   in
-  fit c t sz
+  fit c t
 in
 
 let st = Array.init d.rows (fun _ -> 0)
@@ -55,7 +55,7 @@ in
   
 let alloc (server: int)
     (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
-      let rec alloc s g l o =
+      let rec alloc l ord =
   (if server = 0
    then if !is_done then raise Not_found
      else is_done := true 
@@ -64,7 +64,7 @@ let alloc (server: int)
     None ->
       st.(l) <- d.cols;
       let (new_ord, next) = next_line l ord in
-      alloc server g next new_ord
+      alloc next new_ord
   | Some n ->
     st.(l) <- n + d.size.(server);
     column.(server) <- n;
@@ -73,7 +73,7 @@ let alloc (server: int)
     is_done := false;
     Some (l)
    in
-   begin try alloc server g l ord with Not_found -> None end
+   begin try alloc l ord with Not_found -> None end
 
 in
   
@@ -114,6 +114,7 @@ let fatch_solution servers =
   (group, ligne, column)
 
 let () =
+  let stdin = try open_in Sys.argv.(1) with _ -> stdin in
   (* Nombre de rangées *)
   (* Nombre d’emplacements *)
   (* Nombre d’emplacements indisponibles *)
