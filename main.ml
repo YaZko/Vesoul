@@ -1,7 +1,5 @@
 type ord = Asc | Desc
 
-type state = int array 		(* [1,R] -> left_bound *)
-
 let print_undisp =
   Array.iter (fun row ->
     Array.iter (fun b -> print_char (if b then 'X' else '.')) row; print_newline ())
