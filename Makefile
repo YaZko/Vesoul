@@ -9,5 +9,12 @@ zip:
 main.native: $(SRC)
 	$(OCB) $@
 
+test:
+	cat ex.in | ./main.native
+
+run:
+	cat dc.in | ./main.native
+
+
 clean:
 	$(OCB) -clean
