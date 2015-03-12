@@ -13,6 +13,19 @@ let () =
   let data = Array.init servers (fun _ ->
     Scanf.fscanf stdin "%d %d\n" (fun zi ci -> (zi, ci))
   ) in
+
+  (** Tableau des cases indisponibles *)
+  let is_undisp = Array.init rows (fun r ->
+    Array.init cols (fun c -> false
+    )) in
+  Array.iter (fun (r, c) -> is_undisp.(r).(c) <- true) undisp;
+
+  (** Affichage de la grille initiale *)
+  let () = Array.iter (fun row ->
+    Array.iter (fun b -> print_char (if b then 'X' else '.')) row; print_newline ())
+    is_undisp
+  in
+
   ()
   
   )
