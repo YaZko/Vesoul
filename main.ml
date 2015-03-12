@@ -1,4 +1,3 @@
-
 type Ord = Asc | Desc
 
 type state = int array 		(* [1,R] -> left_bound *)
@@ -48,6 +47,19 @@ let alloc (u: int -> int-> bool) (server: int)
     gr.(server) <- g;
     is_done := false
   
+let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column: int array) : unit =
+  Array.iteri (fun s g ->
+    if g < 0
+    then Printf.fprintf oc "x\n"
+    else Printf.fprintf oc "%d %d %d\n" ligne.(s) column.(s) g
+  ) group
+
+let fatch_solution servers =
+  let group = Array.create servers (-1) in
+  let ligne = Array.create servers (-1) in
+  let column= Array.create servers (-1) in
+
+  (group, ligne, column)
 
 let () =
   (* Nombre de rangées *)
@@ -87,9 +99,10 @@ let () =
   (** Affichage des serveurs par ratio croissant *)
   let () = Array.iter (fun (s, r) -> Printf.printf "%4d %2.0f %2d\n" s r (fst data.(s))) ratio in
 
-  let gr     := Array.init servers (fun _ -> -1) in
-  let line   := Array.init servers (fun _ -> -1) in
-  let column := Array.init servers (fun _ -> -1) in
+  let () =
+  let gr     = Array.init servers (fun _ -> -1) in
+  let line   = Array.init servers (fun _ -> -1) in
+  let column = Array.init servers (fun _ -> -1) in
   
   let main (i: int) (g: int) (l: int) (ord: Ord)  =
     let ti = ratio[i] in
@@ -101,5 +114,15 @@ let () =
    
   in
   main 0 0 0 Asc (fun _ -> 0)
-  
+  in
+
+  (** Solution nulle *)
+  let (group , ligne , column) = fatch_solution servers in
+
+  (** Impression de la solution. *)
+  let oc = open_out_bin "vesoul" in
+  out_solution oc group ligne column;
+  close_out oc;
+
+  ()
   )
