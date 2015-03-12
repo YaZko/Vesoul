@@ -1,52 +1,104 @@
-type Ord = Asc | Desc
+type ord = Asc | Desc
 
 type state = int array 		(* [1,R] -> left_bound *)
 
+type data = {
+  cols: int;
+  rows : int;
+  groups: int;
+  is_undisp : bool array array;
+  size : int array;
+  ratio: (int * float) array;
+}
 
-let fit (u: int -> int -> bool)
+let solution (d: data) =
+
+let servers = Array.length d.size in
+
+let fit
     (l: int) (c:int) (t: int) (sz:int) : int option =
+  let rec fit c t sz =
   if t = 0
   then Some (c-sz)
   else
     try 
-      if u l c
-      then fit u l (c+1) sz sz
-      else fit u l (c+1) (t-1) sz
+      if d.is_undisp.(l).(c)
+      then fit (c+1) sz sz
+      else fit (c+1) (t-1) sz
     with _ -> None
+  in
+  fit c t sz
+in
 
-let st = Array.init R (fun _ -> 0)
+let st = Array.init d.rows (fun _ -> 0)
+
+in
 
 let is_done = ref true
+
+in
 
 let next_line l ord =
   match ord with
     Asc -> let l2 = l + 1 in
-	   if l2 < nb_lines then (Asc, l2)
+	   if l2 < d.rows then (Asc, l2)
 	   else (Desc, l-1)
   | Desc ->
     if l = 0
     then (Asc,1)
     else (Desc,l-1)
-
-    
-let alloc (u: int -> int-> bool) (server: int)
-    (g:int) (l:int) (ord: Ord)  :  int option = (* returns the line where we allocated *)
+in
+  
+  let gr     = Array.init servers (fun _ -> -1) in
+  let line   = Array.init servers (fun _ -> -1) in
+  let column = Array.init servers (fun _ -> -1) in
+  
+let alloc (server: int)
+    (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
+      let rec alloc s g l o =
   (if server = 0
    then if !is_done then raise Not_found
      else is_done := true 
    else ());
-  match fit u l st.(l) size.(server) size.(server) with
+  match fit l st.(l) d.size.(server) d.size.(server) with
     None ->
-      st.(l) <- S; 
+      st.(l) <- d.cols;
       let (new_ord, next) = next_line l ord in
-      alloc u server g next new_ord
+      alloc server g next new_ord
   | Some n ->
-    st.(l) <- n + size.(server);
+    st.(l) <- n + d.size.(server);
     column.(server) <- n;
     line.(server) <- l;
     gr.(server) <- g;
-    is_done := false
+    is_done := false;
+    Some (l)
+   in
+   begin try alloc server g l ord with Not_found -> None end
+
+in
   
+  let rec main (i: int) (g: int) (l: int) (ord: ord)  =
+    let ti = fst d.ratio.(i) in
+    begin match alloc ti g l ord with
+    | Some l ->
+      begin
+    let (new_ord, next) = next_line l ord in
+    if i < servers then
+      main (i+1) ((g+1) mod d.groups) next new_ord 
+    else
+      (gr, line, column)
+      end
+    | None ->
+      (gr, line, column)
+    end
+    (* matchwith *)
+    (*   None -> let (new_ord, next) = next_line l ord in *)
+    (* 	      main i g next new_ord  *)
+    (* | Some (col, st') -> *)
+
+  in
+  main 0 0 0 Asc
+
 let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column: int array) : unit =
   Array.iteri (fun s g ->
     if g < 0
@@ -99,25 +151,17 @@ let () =
   (** Affichage des serveurs par ratio croissant *)
   let () = Array.iter (fun (s, r) -> Printf.printf "%4d %2.0f %2d\n" s r (fst data.(s))) ratio in
 
-  let () =
-  let gr     = Array.init servers (fun _ -> -1) in
-  let line   = Array.init servers (fun _ -> -1) in
-  let column = Array.init servers (fun _ -> -1) in
-  
-  let main (i: int) (g: int) (l: int) (ord: Ord)  =
-    let ti = ratio[i] in
-    alloc ti g l ord;
-    let (new_ord, next) = next_line l ord in
-    if i < M then
-      main (i+1) ((g+1) mod P) next new_ord 
-    else ()      
-   
-  in
-  main 0 0 0 Asc (fun _ -> 0)
-  in
+  let d : data = {
+    cols = cols;
+    rows = rows;
+    groups = groups;
+    ratio = ratio;
+    is_undisp = is_undisp;
+    size = Array.map fst data;
+  } in
 
-  (** Solution nulle *)
-  let (group , ligne , column) = fatch_solution servers in
+  (** Solution *)
+  let (group , ligne , column) = solution d in
 
   (** Impression de la solution. *)
   let oc = open_out_bin "vesoul" in
