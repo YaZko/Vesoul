@@ -11,7 +11,7 @@ type data = {
   ratio: (int * float) array;
 }
 
-let solution (d: data) =
+let solution (d: data) (startline: int) =
 
 let servers = Array.length d.size in
 
@@ -40,7 +40,7 @@ let next_line l ord =
 	   if l2 < d.rows then (Asc, l2)
 	   else (Desc, l-1)
   | Desc ->
-    if l = 0
+    if l <= 0
     then (Asc,1)
     else (Desc,l-1)
 in
@@ -48,8 +48,16 @@ in
   let gr     = Array.init servers (fun _ -> -1) in
   let line   = Array.init servers (fun _ -> -1) in
   let column = Array.init servers (fun _ -> -1) in
+
+
+let rec set_undisp l c sz =
+  if sz = 0 then ()
+  else begin d.is_undisp.(l).(c) <- true;
+    set_undisp l (c+1) (sz-1)
+  end
+in
   
-let alloc (server: int)
+(*let alloc (server: int)
     (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
 
   let is_done = ref false in
@@ -74,11 +82,38 @@ let alloc (server: int)
    in
    begin try alloc l ord with Not_found -> None end
 
+  in*)
+
+let alloc2 (server: int)
+    (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
+
+  let is_done = ref false in
+
+      let rec alloc l ord =
+  (if l = startline && ord = Asc
+   then if !is_done then raise Not_found
+     else is_done := true 
+   else ());
+  match fit l 0 d.size.(server) with
+    None ->
+      let (new_ord, next) = next_line l ord in
+      alloc next new_ord
+  | Some n ->
+    set_undisp l n d.size.(server);
+    column.(server) <- n;
+    line.(server) <- l;
+    gr.(server) <- g;
+    is_done := false;
+    Some (l)
+   in
+   begin try alloc l ord with Not_found -> None end
+
 in
-  
+
+
   let rec main (i: int) (g: int) (l: int) (ord: ord)  =
     let ti = fst d.ratio.(i) in
-    begin match alloc ti g l ord with
+    begin match alloc2 ti g l ord with
     | Some l ->
       begin
     let (new_ord, next) = next_line l ord in
@@ -96,7 +131,7 @@ in
     (* | Some (col, st') -> *)
 
   in
-  main 0 0 0 Asc
+  main 0 0 startline Asc
 
 let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column: int array) : unit =
   Array.iteri (fun s g ->
@@ -154,11 +189,32 @@ let () =
     size = Array.map fst data;
   } in
 
-  (** Solution *)
-  let (group , ligne , column) = solution d in
+  let is_undisp_save = Array.map Array.copy is_undisp in
 
+  let score_solution d g l c = 0 in
+  
+  let best_score = ref 0 in
+  let best_sol = ref ([||],[||],[||]) in
+  
+  (** Solution *)
+  for k = 0 to rows - 1  do
+    let (group , ligne , column) as sol = solution d 0 in
+    Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save; 
+    let score = score_solution d group ligne column in
+    if score > ! best_score
+    then begin
+      best_score := score ;
+      best_sol := sol ;
+      Printf.printf "Best solution has score %d\n" score
+    end
+    else ()
+  done
+  ;  
+
+    
   (** Impression de la solution. *)
   let oc = open_out_bin "vesoul" in
+  let (group , ligne , column) = ! best_sol in 
   out_solution oc group ligne column;
   close_out oc;
 
