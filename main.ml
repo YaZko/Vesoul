@@ -26,6 +26,17 @@ let () =
     is_undisp
   in
 
+  (** Ratio capa/taille par serveur *)
+  let ratio = Array.init servers (fun s ->
+    let (z,c) = data.(s) in
+    (s, float_of_int c /. float_of_int z)
+  ) in
+
+  Array.sort (fun (s1, r1) (s2, r2) -> compare r2 r1) ratio;
+
+  (** Affichage des serveurs par ratio croissant *)
+  let () = Array.iter (fun (s, r) -> Printf.printf "%4d %f\n" s r) ratio in
+
   ()
   
   )
