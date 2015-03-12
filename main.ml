@@ -2,6 +2,10 @@ type ord = Asc | Desc
 
 type state = int array 		(* [1,R] -> left_bound *)
 
+let print_undisp =
+  Array.iter (fun row ->
+    Array.iter (fun b -> print_char (if b then 'X' else '.')) row; print_newline ())
+
 type data = {
   cols: int;
   rows : int;
@@ -27,6 +31,7 @@ let fit
       else fit (c+1) (t-1)
     with _ -> None
   in
+(*   Printf.printf "fit: %d %d %d\n" l c sz; *)
   fit c sz
 in
 
@@ -50,11 +55,14 @@ in
   let column = Array.init servers (fun _ -> -1) in
 
 
-let rec set_undisp l c sz =
+let set_undisp l c sz =
+  let rec set_undisp c sz =
   if sz = 0 then ()
   else begin d.is_undisp.(l).(c) <- true;
-    set_undisp l (c+1) (sz-1)
+    set_undisp (c+1) (sz-1)
   end
+  in
+  set_undisp c sz
 in
   
 (*let alloc (server: int)
@@ -90,7 +98,7 @@ let alloc2 (server: int)
   let is_done = ref false in
 
       let rec alloc l ord =
-  (if l = startline && ord = Asc
+  (if l = startline (* && ord = Asc *)
    then if !is_done then raise Not_found
      else is_done := true 
    else ());
@@ -117,7 +125,7 @@ in
     | Some l ->
       begin
     let (new_ord, next) = next_line l ord in
-    if i < servers then
+    if i + 1 < servers then
       main (i+1) ((g+1) mod d.groups) next new_ord 
     else
       (gr, line, column)
@@ -163,10 +171,7 @@ let () =
   Array.iter (fun (r, c) -> is_undisp.(r).(c) <- true) undisp;
 
   (** Affichage de la grille initiale *)
-  let () = Array.iter (fun row ->
-    Array.iter (fun b -> print_char (if b then 'X' else '.')) row; print_newline ())
-    is_undisp
-  in
+  print_undisp is_undisp;
 
   (** Ratio capa/taille par serveur *)
   let ratio = Array.init servers (fun s ->
@@ -197,11 +202,11 @@ let () =
   let best_sol = ref ([||],[||],[||]) in
   
   (** Solution *)
-  for k = 0 to rows - 1  do
+  for k = 0 to rows - rows  do
     let (group , ligne , column) as sol = solution d 0 in
     Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save; 
     let score = score_solution d group ligne column in
-    if score > ! best_score
+    if score >= ! best_score
     then begin
       best_score := score ;
       best_sol := sol ;
