@@ -18,7 +18,18 @@ let fit (u: int -> int -> bool)
 let st = Array.init R (fun _ -> 0)
 
 let is_done = ref true
-  
+
+let next_line l ord =
+  match ord with
+    Asc -> let l2 = l + 1 in
+	   if l2 < nb_lines then (Asc, l2)
+	   else (Desc, l-1)
+  | Desc ->
+    if l = 0
+    then (Asc,1)
+    else (Desc,l-1)
+
+    
 let alloc (u: int -> int-> bool) (server: int)
     (g:int) (l:int) (ord: Ord)  :  int option = (* returns the line where we allocated *)
   (if server = 0
@@ -87,11 +98,7 @@ let () =
     if i < M then
       main (i+1) ((g+1) mod P) next new_ord 
     else ()      
-    (* matchwith *)
-    (*   None -> let (new_ord, next) = next_line l ord in *)
-    (* 	      main i g next new_ord  *)
-    (* | Some (col, st') -> *)
-
+   
   in
   main 0 0 0 Asc (fun _ -> 0)
   
