@@ -1,8 +1,12 @@
 OCB:=ocamlbuild
+SRC:=$(wildcard *.ml Makefile)
 
 all: main.native
 
-main.native: main.ml
+zip:
+	zip vesoul $(SRC)
+
+main.native: $(SRC)
 	$(OCB) $@
 
 clean:
