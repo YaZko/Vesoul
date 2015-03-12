@@ -16,10 +16,10 @@ let solution (d: data) =
 let servers = Array.length d.size in
 
 let fit
-    (l: int) (c:int) (t: int) (sz:int) : int option =
+    (l: int) (c:int) (sz:int) : int option =
   let rec fit c t =
   if t = 0
-  then Some (c-sz)
+  then Some (c - sz)
   else
     try 
       if d.is_undisp.(l).(c)
@@ -27,14 +27,10 @@ let fit
       else fit (c+1) (t-1)
     with _ -> None
   in
-  fit c t
+  fit c sz
 in
 
 let st = Array.init d.rows (fun _ -> 0)
-
-in
-
-let is_done = ref true
 
 in
 
@@ -55,12 +51,15 @@ in
   
 let alloc (server: int)
     (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
+
+  let is_done = ref false in
+
       let rec alloc l ord =
-  (if server = 0
+  (if l = 0
    then if !is_done then raise Not_found
      else is_done := true 
    else ());
-  match fit l st.(l) d.size.(server) d.size.(server) with
+  match fit l st.(l) d.size.(server) with
     None ->
       st.(l) <- d.cols;
       let (new_ord, next) = next_line l ord in
@@ -106,13 +105,6 @@ let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column
     else Printf.fprintf oc "%d %d %d\n" ligne.(s) column.(s) g
   ) group
 
-let fatch_solution servers =
-  let group = Array.create servers (-1) in
-  let ligne = Array.create servers (-1) in
-  let column= Array.create servers (-1) in
-
-  (group, ligne, column)
-
 let () =
   let stdin = try open_in Sys.argv.(1) with _ -> stdin in
   (* Nombre de rangées *)
@@ -149,8 +141,9 @@ let () =
 
   Array.sort (fun (s1, r1) (s2, r2) -> compare (r2, - fst data.(s2)) (r1, - fst data.(s1))) ratio;
 
-  (** Affichage des serveurs par ratio croissant *)
+  (** Affichage des serveurs par ratio croissant
   let () = Array.iter (fun (s, r) -> Printf.printf "%4d %2.0f %2d\n" s r (fst data.(s))) ratio in
+  *)
 
   let d : data = {
     cols = cols;
