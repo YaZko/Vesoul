@@ -235,79 +235,56 @@ let () =
       let score = score_solution d group column ligne in
 
       Printf.printf "Solution has score %d\n" score;
-
-      (* PW: il faudrait essayer de faire plusieurs permutations de groupes
-	 localement non optimisantes, mais vérifier qu'en N pas, on obtient bien
-	 une meilleure allocation*)
+      Random.self_init ();
+      let really_best = ref score in
+      let really_best_group = Array.copy group in
       let best_score = ref score in
-      for iter = 0 to 10 do
+      for iter = 0 to 300 do
 	let amax = foldargmax (d.groups - 1) (guar_capa ligne group d) in
 	let amin = foldargmin (d.groups - 1) (guar_capa ligne group d) in
-      (* donner un serveur de l'argmax à l'argmin*)
-	for k = 0 to servers - 1 do
-      	(* Printf.printf "server %d\n" k; *)
-      	  let new_gr = Array.copy group in
-      	  if group.(k) = amax then
-      	    begin new_gr.(k) <- amin; 
+	(* donner un serveur de l'argmax à l'argmin*)
+	let shuffled_servers = Array.init servers (fun i -> i) in
+	Array.sort (fun _ _ -> (Random.int 100) - 1) shuffled_servers;
+	try 
+	  begin for k = 0 to servers - 1 do
+	      let k = shuffled_servers.(k) in
+      	  (* Printf.printf "server %d\n" k; *)
+      	      let new_gr = Array.copy group in
+      	      if group.(k) = amax then
+      		begin new_gr.(k) <- amin; 
       		  let score = score_solution d new_gr column ligne in
-      		  if score > ! best_score
+		  let diff = score - (!best_score) in
+      		  if diff >= 0 || (diff >= -20 && Random.int 100 > 80)
       		  then begin
       		    group.(k) <- amin;
+		    (if score > !really_best
+		     then begin
+		       really_best := score;
+		       Array.iteri (fun i e -> really_best_group.(i) <- e)
+			 group;
+		       Printf.printf "New best solution with score %d (iter %d)\n" score iter;
+		       raise Not_found
+		     end
+		     else ());
       		    best_score := score;
-      		    Printf.printf "Updated solution has score %d\n" score;
+
       		    flush stdout
       		  end
       		  else ()
-      	    end
-      	  else ()
-	done
+      		end
+      	      else ()
+	    done
+	  end with _ -> ()
       done
       ;
 
-    (*   Random.self_init (); *)
-    (*   let get_server_in_group g group = *)
-    (*   	let shuffled_servers = *)
-    (*   	  Array.init servers (fun i -> i) in *)
-    (*   	Array.sort (fun _ _ -> (Random.int 3) - 1) shuffled_servers; *)
-    (*   	let rec gsig m = *)
-    (*   	  let s = shuffled_servers.(m) in *)
-    (*   	  if m = 0 then None *)
-    (*   	  else if group.(s) = g then Some s *)
-    (*   	  else gsig (m-1) *)
-    (*   	in *)
-    (*   	gsig (servers - 1) *)
-    (*   in *)
-
-    (*   let best_score = ref score in *)
-    (*   let best_group = Array.copy group in *)
-      
-    (* for k = 0 to 50 do *)
-    (* 	let amax = foldargmax (d.groups - 1) (guar_capa ligne group d) in *)
-    (* 	let amin = foldargmin (d.groups - 1) (guar_capa ligne group d) in *)
-    (* 	begin match get_server_in_group amax group with *)
-    (* 	  Some s -> group.(s) <- amin; *)
-    (* 	    let score = score_solution d group column ligne in *)
-    (* 	    if score > ! best_score *)
-    (* 	    then *)
-    (* 	      begin *)
-    (* 		Array.iteri (fun i e -> best_group.(i) <- e) group; *)
-    (* 		best_score := score; *)
-    (* 		Printf.printf "Updated solution has score %d\n" score *)
-    (* 	      end *)
-    (* 	    else *)
-    (* 	      begin *)
-    (* 		Array.iteri (fun i e -> group.(i) <- e) best_group; *)
-    (* 	      end *)
-    (* 	| None -> () *)
-    (* 	end *)
-    (* done *)
-    (*   ; *)
       
       (* print_undisp d.is_undisp; *)
-
+      let score = score_solution d really_best_group column ligne in
+      Printf.printf "Best solution has score %d\n" score;
   (** Impression de la solution. *)
     let oc = open_out_bin "vesoul" in
-    out_solution oc group ligne column;
+    out_solution oc really_best_group ligne column;
     close_out oc;
 
     ()
