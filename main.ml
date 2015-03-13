@@ -1,5 +1,3 @@
-type ord = Asc | Desc
-
 let print_undisp =
   Array.iter (fun row ->
     Array.iter (fun b -> print_char (if b then 'X' else '.')) row; print_newline ())
@@ -13,6 +11,7 @@ type data = {
   capa : int array;
   ratio: (int * float) array;
 }
+
 
 let score_solution (d: data) gr c l : int =
 
@@ -34,140 +33,101 @@ let score_solution (d: data) gr c l : int =
     else d.capa.(m)
   in
 
-  foldmin (d.groups - 1) (fun g -> (foldmin (d.rows -  1) (fun i -> (foldsum (servers - 1) (fun m -> guar_capa m i g)))))
+  foldmin (d.groups - 1) 
+	  (fun g -> (foldmin (d.rows -  1) 
+			     (fun i -> (foldsum (servers - 1) 
+						(fun m -> guar_capa m i g)))))
 
 let solution (d: data) (startline: int) =
 
-let servers = Array.length d.size in
+  let servers = Array.length d.size in
 
-let fit
-    (l: int) (c:int) (sz:int) : int option =
-  let rec fit c t =
-  if t = 0
-  then Some (c - sz)
-  else
-    try 
-      if d.is_undisp.(l).(c)
-      then fit (c+1) sz
-      else fit (c+1) (t-1)
-    with _ -> None
+
+  let fit
+	(l: int) (c:int) (sz:int) : int option =
+    let rec fit c t =
+      if t = 0
+      then Some (c - sz)
+      else
+	try
+	  if d.is_undisp.(l).(c)
+	  then fit (c+1) sz
+	  else fit (c+1) (t-1)
+	with _ -> None
+    in
+    (*   Printf.printf "fit: %d %d %d\n" l c sz; *)
+    fit c sz
   in
-(*   Printf.printf "fit: %d %d %d\n" l c sz; *)
-  fit c sz
-in
 
-let st = Array.init d.rows (fun _ -> 0)
 
-in
-
-let next_line l ord =
-  match ord with
-    Asc -> let l2 = l + 1 in
-	   if l2 < d.rows then (Asc, l2)
-	   else (Desc, l-1)
-  | Desc ->
-    if l <= 0
-    then (Asc,1)
-    else (Desc,l-1)
-in
-  
   let gr     = Array.init servers (fun _ -> -1) in
   let line   = Array.init servers (fun _ -> -1) in
   let column = Array.init servers (fun _ -> -1) in
+  let capa_cur = Array.init d.groups
+			    (fun _ -> Array.init d.rows
+						 (fun _ -> 0)) in
 
-
-let set_undisp l c sz =
-  let rec set_undisp c sz =
-  if sz = 0 then ()
-  else begin d.is_undisp.(l).(c) <- true;
-    set_undisp (c+1) (sz-1)
-  end
+  let set_undisp l c sz =
+    let rec set_undisp c sz =
+      if sz = 0 then ()
+      else begin d.is_undisp.(l).(c) <- true;
+		 set_undisp (c+1) (sz-1)
+	   end
+    in
+    set_undisp c sz
   in
-  set_undisp c sz
-in
-  
-(*let alloc (server: int)
-    (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
 
-  let is_done = ref false in
+  let cand_lines g : int array =        (* tableau de lignes *)
+    let t = Array.init d.rows (fun r -> (r,capa_cur.(g).(r))) in
+    Array.sort (fun (x,xcapa) (y,ycapa) -> compare xcapa ycapa) t;
+    Array.map fst t
+  in
 
-      let rec alloc l ord =
-  (if l = 0
-   then if !is_done then raise Not_found
-     else is_done := true 
-   else ());
-  match fit l st.(l) d.size.(server) with
-    None ->
-      st.(l) <- d.cols;
-      let (new_ord, next) = next_line l ord in
-      alloc next new_ord
-  | Some n ->
-    st.(l) <- n + d.size.(server);
-    column.(server) <- n;
-    line.(server) <- l;
-    gr.(server) <- g;
-    is_done := false;
-    Some (l)
-   in
-   begin try alloc l ord with Not_found -> None end
+  let alloc (server: int) (g:int) : int option = (* returns the line where we allocated *)
+    let lc = cand_lines g in
+    let rec try_line i =
+      if i = d.rows
+      then raise Not_found
+      else
+	let l = lc.(i) in
+	match fit l 0 d.size.(server) with
+	  None ->
+	  try_line (i+1)
+	| Some n ->
+	   set_undisp l n d.size.(server);
+	   column.(server) <- n;
+	   line.(server) <- l;
+	   gr.(server) <- g;
+	   capa_cur.(g).(l) <- capa_cur.(g).(l) + d.capa.(server);
+	   Some l
+    in
+    begin try try_line 0 with Not_found -> None end
 
-  in*)
-
-let alloc2 (server: int)
-    (g:int) (l:int) (ord: ord)  :  int option = (* returns the line where we allocated *)
-
-  let is_done = ref false in
-
-      let rec alloc l ord =
-  (if l = startline && (ord = Asc || startline = 0 || startline = d.rows - 1)
-   then if !is_done then raise Not_found
-     else is_done := true 
-   else ());
-  match fit l 0 d.size.(server) with
-    None ->
-      let (new_ord, next) = next_line l ord in
-      alloc next new_ord
-  | Some n ->
-    set_undisp l n d.size.(server);
-    column.(server) <- n;
-    line.(server) <- l;
-    gr.(server) <- g;
-    is_done := false;
-    Some (l)
-   in
-   begin try alloc l ord with Not_found -> None end
-
-in
+  in
 
 
-  let rec main (i: int) (g: int) (l: int) (ord: ord)  =
+  let rec main (i: int) (g: int)  =
     let ti = fst d.ratio.(i) in
-    begin match alloc2 ti g l ord with
-    | Some l ->
-      begin
-    let (new_ord, next) = next_line l ord in
-    if i + 1 < servers then
-      main (i+1) ((g+1) mod d.groups) next new_ord 
-    else
-      (gr, line, column)
-      end
-    | None ->
-      (gr, line, column)
+    begin match alloc ti g with
+	  | Some l ->
+	     begin
+	       if i + 1 < servers then
+		 main (i+1) ((g+1) mod d.groups)
+	       else
+		 (gr, line, column)
+	     end
+	  | None ->
+	     (gr, line, column)
     end
-    (* matchwith *)
-    (*   None -> let (new_ord, next) = next_line l ord in *)
-    (* 	      main i g next new_ord  *)
-    (* | Some (col, st') -> *)
-
   in
-  main 0 0 startline Asc
+  main 0 0
 
 let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column: int array) : unit =
   Array.iteri (fun s g ->
-    if g < 0
-    then Printf.fprintf oc "x\n"
-    else Printf.fprintf oc "%d %d %d\n" ligne.(s) column.(s) g
-  ) group
+	       if g < 0
+	       then Printf.fprintf oc "x\n"
+	       else Printf.fprintf oc "%d %d %d\n" ligne.(s) column.(s) g
+	      ) group
 
 let () =
   let stdin = try open_in Sys.argv.(1) with _ -> stdin in
@@ -220,28 +180,34 @@ let () =
 
   let best_score = ref 0 in
   let best_sol = ref ([||],[||],[||]) in
-  
+  let best_undisp = ref [||] in
+
   (** Solution *)
   for k = 0 to rows - 1  do
+    Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save;
     let (group , ligne , column) as sol = solution d k in
-    Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save; 
+
 (*     print_undisp d.is_undisp; *)
     let score = score_solution d group column ligne in
     if score >= ! best_score
     then begin
       best_score := score ;
       best_sol := sol ;
+      best_undisp := Array.map Array.copy d.is_undisp
     end
     else ();
     Printf.printf "Solution %d has score %d\n" k score
   done
-  ;  
+  ;
+
+  print_undisp ! best_undisp;
 
   (** Impression de la solution. *)
   let oc = open_out_bin "vesoul" in
-  let (group , ligne , column) = ! best_sol in 
+  let (group , ligne , column) = ! best_sol in
   out_solution oc group ligne column;
   close_out oc;
 
   ()
   )
+
