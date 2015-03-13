@@ -16,6 +16,7 @@ type data = {
   ratio: (int * float) array;
 }
 
+  
 
 let foldargmin n f : int =
   let rec aux i res =
@@ -23,6 +24,17 @@ let foldargmin n f : int =
     else (if f i < f res then aux (i-1) i else aux (i-1) res)
   in
   aux n 0
+
+let foldargmax n f : int =
+  let rec aux i res =
+    if i = 0 then (if f 0 > f res then 0 else res)
+    else (if f i > f res then aux (i-1) i else aux (i-1) res)
+  in
+  aux n 0
+
+
+    
+    
     
 let rec foldmin n f: int =
   if n = 0 then f 0
@@ -192,7 +204,7 @@ let () =
     Array.iter (fun (r, c) -> is_undisp.(r).(c) <- true) undisp;
 
   (** Affichage de la grille initiale *)
-    print_undisp is_undisp;
+    (* print_undisp is_undisp; *)
 
   (** Ratio capa/taille par serveur *)
     let ratio = Array.init servers (fun s ->
@@ -205,7 +217,7 @@ let () =
   (** Affichage des serveurs par ratio croissant
       let () = Array.iter (fun (s, r) -> Printf.printf "%4d %2.0f %2d\n" s r (fst data.(s))) ratio in
   *)
-
+    
     let d : data = {
       cols = cols;
       rows = rows;
@@ -216,35 +228,85 @@ let () =
       capa = Array.map snd data;
     } in
 
-    let is_undisp_save = Array.map Array.copy is_undisp in
-
-    let best_score = ref 0 in
-    let best_sol = ref ([||],[||],[||]) in
-    let best_undisp = ref [||] in
-    
   (** Solution *)
-    for k = 0 to rows - 1  do
-      Array.iteri (fun i a -> d.is_undisp.(i) <- Array.copy a) is_undisp_save; 
-      let (group , ligne , column) as sol = solution d k in
 
-    (*     print_undisp d.is_undisp; *)
+      let (group , ligne , column) as sol = solution d 0 in
+
       let score = score_solution d group column ligne in
-      if score >= ! best_score
-      then begin
-	best_score := score ;
-	best_sol := sol ;
-	best_undisp := Array.map Array.copy d.is_undisp
-      end
-      else ();
-      Printf.printf "Solution %d has score %d\n" k score
-    done
-    ;
 
-    (* print_undisp ! best_undisp; *)
+      Printf.printf "Solution has score %d\n" score;
+
+      (* PW: il faudrait essayer de faire plusieurs permutations de groupes
+	 localement non optimisantes, mais vérifier qu'en N pas, on obtient bien
+	 une meilleure allocation*)
+      let best_score = ref score in
+      for iter = 0 to 10 do
+	let amax = foldargmax (d.groups - 1) (guar_capa ligne group d) in
+	let amin = foldargmin (d.groups - 1) (guar_capa ligne group d) in
+      (* donner un serveur de l'argmax à l'argmin*)
+	for k = 0 to servers - 1 do
+      	(* Printf.printf "server %d\n" k; *)
+      	  let new_gr = Array.copy group in
+      	  if group.(k) = amax then
+      	    begin new_gr.(k) <- amin; 
+      		  let score = score_solution d new_gr column ligne in
+      		  if score > ! best_score
+      		  then begin
+      		    group.(k) <- amin;
+      		    best_score := score;
+      		    Printf.printf "Updated solution has score %d\n" score;
+      		    flush stdout
+      		  end
+      		  else ()
+      	    end
+      	  else ()
+	done
+      done
+      ;
+
+    (*   Random.self_init (); *)
+    (*   let get_server_in_group g group = *)
+    (*   	let shuffled_servers = *)
+    (*   	  Array.init servers (fun i -> i) in *)
+    (*   	Array.sort (fun _ _ -> (Random.int 3) - 1) shuffled_servers; *)
+    (*   	let rec gsig m = *)
+    (*   	  let s = shuffled_servers.(m) in *)
+    (*   	  if m = 0 then None *)
+    (*   	  else if group.(s) = g then Some s *)
+    (*   	  else gsig (m-1) *)
+    (*   	in *)
+    (*   	gsig (servers - 1) *)
+    (*   in *)
+
+    (*   let best_score = ref score in *)
+    (*   let best_group = Array.copy group in *)
+      
+    (* for k = 0 to 50 do *)
+    (* 	let amax = foldargmax (d.groups - 1) (guar_capa ligne group d) in *)
+    (* 	let amin = foldargmin (d.groups - 1) (guar_capa ligne group d) in *)
+    (* 	begin match get_server_in_group amax group with *)
+    (* 	  Some s -> group.(s) <- amin; *)
+    (* 	    let score = score_solution d group column ligne in *)
+    (* 	    if score > ! best_score *)
+    (* 	    then *)
+    (* 	      begin *)
+    (* 		Array.iteri (fun i e -> best_group.(i) <- e) group; *)
+    (* 		best_score := score; *)
+    (* 		Printf.printf "Updated solution has score %d\n" score *)
+    (* 	      end *)
+    (* 	    else *)
+    (* 	      begin *)
+    (* 		Array.iteri (fun i e -> group.(i) <- e) best_group; *)
+    (* 	      end *)
+    (* 	| None -> () *)
+    (* 	end *)
+    (* done *)
+    (*   ; *)
+      
+      (* print_undisp d.is_undisp; *)
 
   (** Impression de la solution. *)
     let oc = open_out_bin "vesoul" in
-    let (group , ligne , column) = ! best_sol in 
     out_solution oc group ligne column;
     close_out oc;
 
