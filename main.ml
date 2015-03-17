@@ -181,8 +181,7 @@ let out_solution (oc: out_channel) (group: int array) (ligne: int array) (column
     else Printf.fprintf oc "%d %d %d\n" ligne.(s) column.(s) g
   ) group
 
-let () =
-  let stdin = try open_in Sys.argv.(1) with _ -> stdin in
+let read_data (stdin: in_channel) : data =
   (* Nombre de rangées *)
   (* Nombre d’emplacements *)
   (* Nombre d’emplacements indisponibles *)
@@ -202,9 +201,6 @@ let () =
       Array.init cols (fun c -> false
       )) in
     Array.iter (fun (r, c) -> is_undisp.(r).(c) <- true) undisp;
-
-  (** Affichage de la grille initiale *)
-    (* print_undisp is_undisp; *)
 
   (** Ratio capa/taille par serveur *)
     let ratio = Array.init servers (fun s ->
@@ -227,6 +223,17 @@ let () =
       size = Array.map fst data;
       capa = Array.map snd data;
     } in
+    d
+  )
+
+
+let () =
+  let stdin = try open_in Sys.argv.(1) with _ -> stdin in
+  let d : data = read_data stdin in
+  (** Affichage de la grille initiale *)
+    (* print_undisp d.is_undisp; *)
+
+  let servers = Array.length d.size in
 
   (** Solution *)
 
@@ -288,4 +295,3 @@ let () =
     close_out oc;
 
     ()
-  )
